@@ -9,26 +9,39 @@ function! s:GetCurrentBufferName()
   return fnamemodify(bufname("%"), ":p")
 endfunction
 
-function! s:AddCurrentBufferToProject()
+function! s:AddCurrentBufferToProject(groupName)
   let bufName = s:GetCurrentBufferName()
-  if !has_key(g:projectFiles, bufName)
-    let g:projectFiles[bufName] = 1 
+
+  if !has_key(g:projectFiles, groupName)
+    let g:projectFiles[groupName] = [bufName]
+  else
+    call add(g:projectFiles[groupName], bufName)
   endif
 endfunction
 
 function! s:RemoveCurrentBufferFromProject()
   let bufName = s:GetCurrentBufferName()
-  if has_key(g:projectFiles, bufName)
-    unlet g:projectFiles[bufName]
-  endif
+
+  for key in keys(g:projectFiles)
+    call filter(g:projectFiles[key], 'v:val != bufName')
+    if empty(g:projectFiles[ket])
+      unlet g:projectFiles[key]
+    endif
+  endfor
 endfunction
 
 function! s:CloseAllUnprojectBuffers()
   for i in s:GetBuffers()
     let bufName = fnamemodify(bufname(i), ':p')
-    if !has_key(g:projectFiles, bufName)
+    let all = []
+    for val in values(g:projectFiles)
+      all += val
+    endfor
+
+    if index(all, bufName) == -1
       execute "bwipeout ".i
     endif
+
   endfor
 endfunction
 
