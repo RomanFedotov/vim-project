@@ -97,9 +97,9 @@ function! s:CloseAllUnprojectBuffers()
 endfunction
 
 function! ProjectExplorer()
-  echo s:GetBuffers()
   let s:lastBufferNum = bufnr('%')
-  exe "drop __ProjectExplorer__"
+  exe "keepjumps drop __ProjectExplorer__"
+  setlocal nobuflisted
   call s:PrintProject()
 endfunction
 
@@ -108,7 +108,6 @@ function! s:BufferSettings()
     setlocal bufhidden=hide
     setlocal noswapfile
     setlocal nobuflisted
-    setlocal nomodifiable
     setlocal filetype=gundo
     setlocal nolist
     setlocal nonumber
@@ -117,6 +116,7 @@ function! s:BufferSettings()
     setlocal cursorline
     call s:SetupSyntax()
     call s:MapKeys()
+    setlocal nomodifiable
 endfunction
 
 
@@ -152,11 +152,11 @@ endfunction
 
 function! s:JumpToSelectedBuffer()
     let _bufNbr = s:GetSelectedBufferNum()
-    exec 'b '._bufNbr
+    exec 'keepalt b '._bufNbr
 endfunction
 
 function! s:CloseSelectedBuffer()
-    exec 'b '.s:lastBufferNum
+    exec 'keepalt b '.s:lastBufferNum
 endfunction
 
 function! s:AddRemoveSelectedBuffer()
@@ -202,9 +202,8 @@ function! s:AddSelectedBufferToProject()
   call s:PrintProject()
 endfunction
 
+
 autocmd BufNewFile __ProjectExplorer__ call s:BufferSettings()
-
-
 
 function! SaveProject(fileName)
   let res = []
