@@ -8,7 +8,7 @@ function! s:GetBuffers()
 endfunction
 
 function! s:GetBuffersDict()
-  let l = filter(range(1, bufnr('$')), "buflisted(v:val)")
+  let l = s:GetBuffers()
   let res = {}
   for i in l
     let bufName = fnamemodify(bufname(i), ':p')
@@ -21,8 +21,8 @@ function! s:GetNameFromNum(bufNum)
   return fnamemodify(bufname(a:bufNum), ":p")
 endfunction
 
-function! s:AddBufferToProject(buferNum, groupName)
-  let bufName = s:GetNameFromNum(a:buferNum)
+function! s:AddBufferToProject(bufferNum, groupName)
+  let bufName = s:GetNameFromNum(a:bufferNum)
 
   if !has_key(g:projectFiles, a:groupName)
     let g:projectFiles[a:groupName] = [bufName]
@@ -31,8 +31,8 @@ function! s:AddBufferToProject(buferNum, groupName)
   endif
 endfunction
 
-function! s:RemoveBufferFromProject(buferNum)
-  let bufName = s:GetNameFromNum(a:buferNum)
+function! s:RemoveBufferFromProject(bufferNum)
+  let bufName = s:GetNameFromNum(a:bufferNum)
 
   for key in keys(g:projectFiles)
     call filter(g:projectFiles[key], 'v:val != bufName')
@@ -46,9 +46,12 @@ function! s:RemoveCurrentBufferFromProject()
   call s:RemoveBufferFromProject(bufnr('%'))
 endfunction
 function! s:PrintProject()
+"let s:lastBufferNum = 0
+  let lnum = 0
   setlocal modifiable
   normal ggdG
   let buffersDict = s:GetBuffersDict()
+  "echo s:GetBuffers()
   let ungroupedBuffers = copy(buffersDict)
   let res = []
   for p in keys(g:projectFiles)
@@ -58,6 +61,7 @@ function! s:PrintProject()
       if has_key(ungroupedBuffers, i)
         unlet ungroupedBuffers[i]
       endif
+      let lnum += buffersDict[i] == s:lastBufferNum ? len(res) : 0
     endfor
     call add(res, "")
   endfor
@@ -68,9 +72,12 @@ function! s:PrintProject()
     for i in keys(ungroupedBuffers)
         call add(res, printf("%i  %-30s --- %-s", ungroupedBuffers[i], fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
     endfor
+    let lnum += ungroupedBuffers[i] == s:lastBufferNum ? len(res) : 0
   endif
 
   call append(0, res)
+
+  keepjumps exe "normal " . lnum . "gg"
   setlocal nomodifiable
 endfunction
 
@@ -90,11 +97,10 @@ function! s:CloseAllUnprojectBuffers()
 endfunction
 
 function! ProjectExplorer()
+  echo s:GetBuffers()
   let s:lastBufferNum = bufnr('%')
   exe "drop __ProjectExplorer__"
   call s:PrintProject()
-  setlocal nobuflisted
-
 endfunction
 
 function! s:BufferSettings()
@@ -132,14 +138,13 @@ function! s:MapKeys()
 
     nnoremap <script> <silent> <buffer> <2-leftmouse> :call <SID>JumpToSelectedBuffer()<CR>
     nnoremap <script> <silent> <buffer> <CR>          :call <SID>JumpToSelectedBuffer()<CR>
-    nnoremap <script> <silent> <buffer> q             :call <SID>Close()<CR>
-    nnoremap <script> <silent> <buffer> -             :call <SID>RemoveAddSelectedBuffer()<cr>
+    nnoremap <script> <silent> <buffer> q             :call <SID>CloseSelectedBuffer()<CR>
+    nnoremap <script> <silent> <buffer> -             :call <SID>AddRemoveSelectedBuffer()<cr>
 
     for k in ["G", "n", "N", "L", "M", "H"]
         exec "nnoremap <buffer> <silent>" k ":keepjumps normal!" k."<CR>"
     endfor
 endfunction
-
 
 function! s:GetSelectedBufferNum()
     return str2nr(getline('.'))
@@ -150,11 +155,12 @@ function! s:JumpToSelectedBuffer()
     exec 'b '._bufNbr
 endfunction
 
-function! s:Close()
+function! s:CloseSelectedBuffer()
     exec 'b '.s:lastBufferNum
 endfunction
 
-function! s:RemoveAddSelectedBuffer()
+function! s:AddRemoveSelectedBuffer()
+  let bufferNum = s:GetSelectedBufferNum()
 	let lnum = line('.')
   if lnum > s:ungroupLnum
     call s:AddSelectedBufferToProject()
@@ -162,7 +168,6 @@ function! s:RemoveAddSelectedBuffer()
     call s:RemoveSelectedBufferFromProject()
   endif
 endfunction
-
 function! s:RemoveSelectedBufferFromProject()
   let bufferNum = s:GetSelectedBufferNum()
 	let lnum = line('.')
@@ -171,44 +176,100 @@ function! s:RemoveSelectedBufferFromProject()
   keepjumps exe "normal " . lnum . "gg"
 endfunction
 
-function! s:AddSelectedBufferToProject()
-  let bufferNum = s:GetSelectedBufferNum()
-			"let color = inputlist(['Select color:', '1. red', '2. green', '3. blue'])
-  let l = []
-  let n = 0
+function! s:AskAddBufferToProject(bufferNum)
+  let l = ""
+  let n = 1
   for key in keys(g:projectFiles)
-    call append(l, n . ". " . key)
+    "call add(l, n . ". " . key)
+    let l = l . n . ". " . key . "\n"
     let n += 1
   endfor
+  let l = l."Enter nuber or name of group: "
   
-  let group = inputlist(l)
+  let groupName = input(l)
+  if groupName =~ '^\d\+$'
+    let groupName = keys(g:projectFiles)[groupName-1]
+  elseif !has_key(g:projectFiles, groupName)
+    let  g:projectFiles[groupName] = []
+  endif
 
-  echo "addToProject!!"
+  call add(g:projectFiles[groupName], s:GetNameFromNum(a:bufferNum))
+endfunction
+
+function! s:AddSelectedBufferToProject()
+  let bufferNum = s:GetSelectedBufferNum()
+  call s:AskAddBufferToProject(bufferNum)
+  call s:PrintProject()
 endfunction
 
 autocmd BufNewFile __ProjectExplorer__ call s:BufferSettings()
 
 
 
-function! s:AddCurrentBufferToProject(groupName)
-  call s:AddBufferToProject(bufnr('%'), a:groupName)
-endfunction
-"--------------------------------------------------------------------------------
-:e /home/roman/Documents/projects/sandbox/py/testGp.py
-:e /home/roman/Documents/projects/sandbox/py/plot.gpi
-:e /home/roman/Documents/projects/numericalTable/ftable.cpp
-:e /home/roman/Documents/projects/wikidpad-plugins/user_extensions/R_CodeSyntax.py
-:e /home/roman/Documents/projects/wikidpad-plugins/user_extensions/R_QText.py
+function! SaveProject(fileName)
+  let res = []
+  for key in keys(g:projectFiles)
+    call add(res, key)
+    "call filter(g:projectFiles[key], 'v:val != bufName')
+    for b in g:projectFiles[key]
+      call add(res, "  ".b)
+    endfor
+  endfor
 
-"echo s:GetBuffers()
-call s:AddCurrentBufferToProject('group1')
-:bn
-call s:AddCurrentBufferToProject('group2')
-:bn
-call s:AddCurrentBufferToProject('group2')
-"echo g:projectFiles
-call s:CloseAllUnprojectBuffers()
-"echo s:GetBuffers()
-"echo g:projectFiles
-"call s:PrintProject()
+  call writefile(res, a:fileName)
+endfunction
+
+function! LoadProject(fileName)
+  let g:projectFiles = {}
+"echo matchlist("abc-def", '\(.*\)-\(.*\)')
+  let groupNameEx = '^\(\w\+\)$'
+  let bufferNameEx = '^\s\s\(\S\+\)$'
+  let currentList = []
+
+  for l in readfile(a:fileName)
+    if l =~ groupNameEx 
+      let groupName = matchlist(l, groupNameEx)[1]
+      let currentList = []
+      let g:projectFiles[groupName] = currentList
+    elseif l =~ bufferNameEx 
+      let bufferName = matchlist(l, bufferNameEx)[1]
+      call add(currentList, bufferName)
+      echo bufferName
+      exe "drop " . bufferName
+    endif
+  endfor
+endfunction
+
+function! s:AskAddCurrentBufferToProject(groupName)
+  let bufferNum = bufnr('%')
+  call s:RemoveBufferFromProject(bufferNum)
+  call s:AskAddBufferToProject(bufferNum, a:groupName)
+endfunction
+
+function! s:AddCurrentBufferToProject(groupName)
+  let bufferNum = bufnr('%')
+  call s:RemoveBufferFromProject(bufferNum)
+  call s:AddBufferToProject(bufferNum, a:groupName)
+endfunction
+
+"--------------------------------------------------------------------------------
+"call writefile(['1. zzz', '2. ppp'], '/home/users/romanf/Documents/test.txt' )
+"echo matchlist("abc-def", '\(.*\)-\(.*\)')
+"--------------------------------------------------------------------------------
+":e /home/roman/Documents/projects/sandbox/py/testGp.py
+":e /home/roman/Documents/projects/sandbox/py/plot.gpi
+":e /home/roman/Documents/projects/numericalTable/ftable.cpp
+":e /home/roman/Documents/projects/wikidpad-plugins/user_extensions/R_CodeSyntax.py
+":e /home/roman/Documents/projects/wikidpad-plugins/user_extensions/R_QText.py
+
+"call s:AddCurrentBufferToProject('group1')
+":bn
+"call s:AddCurrentBufferToProject('group2')
+":bn
+"call s:AddCurrentBufferToProject('group2')
+""call s:CloseAllUnprojectBuffers()
+":bn
+""call SaveProject("/home/roman/Documents/prj.txt")
 "call ProjectExplorer()
+call LoadProject("/home/roman/Documents/prj.txt")
+call s:CloseAllUnprojectBuffers()
