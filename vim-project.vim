@@ -1,3 +1,11 @@
+" ============================================================================
+" File:        vim-project.vim
+" Description: Plugin for organizing buffers. 
+" Author:      Roman Fedotov
+" Licence:     Vim licence
+" Version:     0.0.1
+"
+" ============================================================================
 let g:projectFiles = {}
 let s:lastBufferNum = 0
 let s:ungroupLnum = 0
@@ -49,7 +57,7 @@ function! s:PrintProject()
 "let s:lastBufferNum = 0
   let lnum = 0
   setlocal modifiable
-  normal ggdG
+  normal! ggdG
   let buffersDict = s:GetBuffersDict()
   "echo s:GetBuffers()
   let ungroupedBuffers = copy(buffersDict)
@@ -68,16 +76,16 @@ function! s:PrintProject()
 
   let s:ungroupLnum = len(res)  
   if !empty(ungroupedBuffers)
-    call add(res, "ungruped")
+    call add(res, "ungrouped")
     for i in keys(ungroupedBuffers)
-        call add(res, printf("%i  %-30s --- %-s", ungroupedBuffers[i], fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
+      call add(res, printf("%i  %-30s --- %-s", ungroupedBuffers[i], fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
+      let lnum += ungroupedBuffers[i] == s:lastBufferNum ? len(res) : 0
     endfor
-    let lnum += ungroupedBuffers[i] == s:lastBufferNum ? len(res) : 0
   endif
 
   call append(0, res)
 
-  keepjumps exe "normal " . lnum . "gg"
+  keepjumps exe "normal! " . lnum . "gg"
   setlocal nomodifiable
 endfunction
 
@@ -99,7 +107,7 @@ endfunction
 function! ProjectExplorer()
   let s:lastBufferNum = bufnr('%')
   exe "keepjumps drop __ProjectExplorer__"
-  setlocal nobuflisted
+  setlocal nobuflisted " TODO: solve this 
   call s:PrintProject()
 endfunction
 
@@ -140,6 +148,7 @@ function! s:MapKeys()
     nnoremap <script> <silent> <buffer> <CR>          :call <SID>JumpToSelectedBuffer()<CR>
     nnoremap <script> <silent> <buffer> q             :call <SID>CloseSelectedBuffer()<CR>
     nnoremap <script> <silent> <buffer> -             :call <SID>AddRemoveSelectedBuffer()<cr>
+    nnoremap <script> <silent> <buffer> D             :call <SID>WipeSelectedBuffer()<CR>
 
     for k in ["G", "n", "N", "L", "M", "H"]
         exec "nnoremap <buffer> <silent>" k ":keepjumps normal!" k."<CR>"
@@ -159,6 +168,13 @@ function! s:CloseSelectedBuffer()
     exec 'keepalt b '.s:lastBufferNum
 endfunction
 
+function! s:WipeSelectedBuffer()
+  let bufferNum = s:GetSelectedBufferNum()
+  call s:RemoveBufferFromProject(bufferNum)
+  execute "bwipeout ".bufferNum
+  call s:PrintProject()
+endfunction
+
 function! s:AddRemoveSelectedBuffer()
   let bufferNum = s:GetSelectedBufferNum()
 	let lnum = line('.')
@@ -173,7 +189,7 @@ function! s:RemoveSelectedBufferFromProject()
 	let lnum = line('.')
   call s:RemoveBufferFromProject(bufferNum)
   call s:PrintProject()
-  keepjumps exe "normal " . lnum . "gg"
+  keepjumps exe "normal! " . lnum . "gg"
 endfunction
 
 function! s:AskAddBufferToProject(bufferNum)
@@ -205,20 +221,29 @@ endfunction
 
 autocmd BufNewFile __ProjectExplorer__ call s:BufferSettings()
 
-function! SaveProject(fileName)
+function! s:SaveProject(fileName)
+  let lastBufferNum = bufnr('%')
+  let buffersDict = s:GetBuffersDict()
   let res = []
   for key in keys(g:projectFiles)
     call add(res, key)
     "call filter(g:projectFiles[key], 'v:val != bufName')
     for b in g:projectFiles[key]
       call add(res, "  ".b)
+      let bufferNum = buffersDict[b]
+      if bufloaded(bufferNum)
+        exec 'keepalt keepjumps b '.bufferNum
+        mkview
+      endif
     endfor
   endfor
 
   call writefile(res, a:fileName)
+
+  exec 'keepalt b '.lastBufferNum
 endfunction
 
-function! LoadProject(fileName)
+function! s:LoadProject(fileName)
   let g:projectFiles = {}
 "echo matchlist("abc-def", '\(.*\)-\(.*\)')
   let groupNameEx = '^\(\w\+\)$'
@@ -233,8 +258,8 @@ function! LoadProject(fileName)
     elseif l =~ bufferNameEx 
       let bufferName = matchlist(l, bufferNameEx)[1]
       call add(currentList, bufferName)
-      echo bufferName
-      exe "drop " . bufferName
+      "exe "drop " . bufferName
+      silent exe "badd " . bufferName
     endif
   endfor
 endfunction
@@ -250,6 +275,11 @@ function! s:AddCurrentBufferToProject(groupName)
   call s:RemoveBufferFromProject(bufferNum)
   call s:AddBufferToProject(bufferNum, a:groupName)
 endfunction
+
+command! -nargs=0 ProjectExplorer call ProjectExplorer()
+command! -nargs=0 ProjectCloseUngroup call <SID>CloseAllUnprojectBuffers()
+command! -nargs=1 LoadProject call <SID>LoadProject("<args>")
+command! -nargs=1 SaveProject call <SID>SaveProject("<args>")
 
 "--------------------------------------------------------------------------------
 "call writefile(['1. zzz', '2. ppp'], '/home/users/romanf/Documents/test.txt' )
@@ -270,5 +300,5 @@ endfunction
 ":bn
 ""call SaveProject("/home/roman/Documents/prj.txt")
 "call ProjectExplorer()
-call LoadProject("/home/roman/Documents/prj.txt")
-call s:CloseAllUnprojectBuffers()
+"LoadProject /home/roman/Documents/prj.txt
+"call s:CloseAllUnprojectBuffers()
