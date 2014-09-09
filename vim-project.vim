@@ -57,7 +57,7 @@ function! s:PrintProject()
 "let s:lastBufferNum = 0
   let lnum = 0
   setlocal modifiable
-  normal! ggdG
+  normal! gg"_dG
   let buffersDict = s:GetBuffersDict()
   "echo s:GetBuffers()
   let ungroupedBuffers = copy(buffersDict)
@@ -119,7 +119,7 @@ function! s:BufferSettings()
     setlocal filetype=gundo
     setlocal nolist
     setlocal nonumber
-    setlocal norelativenumber
+    setlocal relativenumber
     setlocal nowrap
     setlocal cursorline
     call s:SetupSyntax()
@@ -160,8 +160,12 @@ function! s:GetSelectedBufferNum()
 endfunction
 
 function! s:JumpToSelectedBuffer()
-    let _bufNbr = s:GetSelectedBufferNum()
-    exec 'keepalt b '._bufNbr
+    let bufferNum = s:GetSelectedBufferNum()
+    let viewIsLoaded = bufloaded(bufferNum)
+    exec 'keepalt b '.bufferNum
+    if !viewIsLoaded
+      loadview
+    endif
 endfunction
 
 function! s:CloseSelectedBuffer()
@@ -300,5 +304,5 @@ command! -nargs=1 SaveProject call <SID>SaveProject("<args>")
 ":bn
 ""call SaveProject("/home/roman/Documents/prj.txt")
 "call ProjectExplorer()
-"LoadProject /home/roman/Documents/prj.txt
+LoadProject /home/roman/Documents/prj.txt
 "call s:CloseAllUnprojectBuffers()
