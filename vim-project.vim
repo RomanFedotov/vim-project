@@ -75,8 +75,15 @@ function! s:PrintProject()
   for [p, buffers] in allGroups
     call add(res, p)
     for i in buffers
-      call add(res, printf("%3i  %-50s %-s", buffersDict[i], fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
-      let lnum += buffersDict[i] == s:lastBufferNum ? len(res) : 0
+      let bufferNum = buffersDict[i]
+      let isCurrent = buffersDict[i] == s:lastBufferNum 
+      let s = ["", "", ""] 
+      let s[0] = bufloaded(bufferNum) ? (isCurrent? "a" : "h")  : " "
+			let s[1] = getbufvar(bufferNum, "&mod") ? "+" : " "
+			let s[2] = getbufvar(bufferNum, "&ma") ? " " : "-"
+			let s[2] = getbufvar(bufferNum, "&readonly") ? "=" : s[2]
+      call add(res, printf("%3i %s %-50s %-s", buffersDict[i], join(s,''), fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
+      let lnum += isCurrent ? len(res) : 0
     endfor
     call add(res, "")
   endfor
@@ -125,14 +132,23 @@ function! s:BufferSettings()
     setlocal nomodifiable
 endfunction
 
+"group2
+  "3 h = testGp.py                                          /home/roman/Documents/projects/sandbox/py
+  "4 h+- plot.gpi                                           /home/roman/Documents/projects/sandbox/py
 
 function! s:SetupSyntax()
     if has("syntax")
         syn match bufExplorerBufNbr   /^\s*\d\+/
         syn match bufExplorerGroupName   "^\w\+$"
+        syn match bufExplorerLoadedBuffer "h ..\S\+"
+        syn match bufExplorerCurrentBuffer "a[ +]..\S\+"
+        syn match bufExplorerModifiedBuffer "h+..\S\+"
 
         hi def link bufExplorerBufNbr Number
         hi def link bufExplorerGroupName Statement
+        hi def link bufExplorerLoadedBuffer Constant
+        hi def link bufExplorerCurrentBuffer Type
+        hi def link bufExplorerModifiedBuffer PreProc
 
     endif
 endfunction
