@@ -59,29 +59,27 @@ function! s:PrintProject()
   setlocal modifiable
   normal! gg"_dG
   let buffersDict = s:GetBuffersDict()
-  "echo s:GetBuffers()
-  let ungroupedBuffers = copy(buffersDict)
+
+  let groupedBuffers = []
+  for b in values(g:projectFiles)
+    let groupedBuffers += b
+  endfor
+
+  let ungroupedBuffers = keys(buffersDict)
+  call filter(ungroupedBuffers, 'index(groupedBuffers, v:val) == -1')
+
+  let allGroups = items(g:projectFiles)
+  call add(allGroups, ["ungrouped", ungroupedBuffers])
+
   let res = []
-  for p in keys(g:projectFiles)
+  for [p, buffers] in allGroups
     call add(res, p)
-    for i in g:projectFiles[p]
-      call add(res, printf("%i  %-30s --- %-s", buffersDict[i], fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
-      if has_key(ungroupedBuffers, i)
-        unlet ungroupedBuffers[i]
-      endif
+    for i in buffers
+      call add(res, printf("%3i  %-50s %-s", buffersDict[i], fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
       let lnum += buffersDict[i] == s:lastBufferNum ? len(res) : 0
     endfor
     call add(res, "")
   endfor
-
-  let s:ungroupLnum = len(res)  
-  if !empty(ungroupedBuffers)
-    call add(res, "ungrouped")
-    for i in keys(ungroupedBuffers)
-      call add(res, printf("%i  %-30s --- %-s", ungroupedBuffers[i], fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
-      let lnum += ungroupedBuffers[i] == s:lastBufferNum ? len(res) : 0
-    endfor
-  endif
 
   call append(0, res)
 
@@ -304,5 +302,7 @@ command! -nargs=1 SaveProject call <SID>SaveProject("<args>")
 ":bn
 ""call SaveProject("/home/roman/Documents/prj.txt")
 "call ProjectExplorer()
-LoadProject /home/roman/Documents/prj.txt
+"LoadProject /home/roman/Documents/prj.txt
 "call s:CloseAllUnprojectBuffers()
+
+
