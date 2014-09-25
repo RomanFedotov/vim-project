@@ -6,10 +6,12 @@
 " Version:     0.0.1
 "
 " ============================================================================
-let s:projectFiles = {}
+let s:projectFiles = []
 let s:projectFileName = ""
 let s:lastBufferNum = 0
 let s:ungroupLnum = 0
+"let s:lineInfo = []
+let s:buffersProperty = {}
 
 function! s:GetBuffers() "{{{1
   return filter(range(1, bufnr('$')), "buflisted(v:val)")
@@ -30,41 +32,55 @@ function! s:GetNameFromNum(bufNum) "{{{1
   return fnamemodify(bufname(a:bufNum), ":p")
 endfunction
 
+function! GetBuffersProperty() "{{{1
+  redir => lsOutput
+  silent buffers!
+  redir END
+  let lsLines = split(lsOutput, '\n')
+  let res = {}
+  for l in lsLines
+    let res[str2nr(l[:2])]=l[3:8]
+  endfor
+  return res
+endfunction
+
+function! s:ProjectGetGroup(groupName, createNew) "{{{1
+  for i in s:projectFiles
+    if i[0] == a:groupName | return i | endif
+  endfor
+  if createNew
+    let newGroup = [a:groupName, []]
+    call add(s:projectFiles, newGroup)
+    return newGroup
+  endif
+  return [] 
+endfunction
+
 function! s:ProjectAddBuffer(bufferNum, groupName) "{{{1
   let bufName = s:GetNameFromNum(a:bufferNum)
-
-  if !has_key(s:projectFiles, a:groupName)
-    let s:projectFiles[a:groupName] = [bufName]
-  else
-    call add(s:projectFiles[a:groupName], bufName)
-  endif
+  let group = s:ProjectGetGroup(a:groupName, 1)
+  call add(group, bufName)
 endfunction
 
 function! s:ProjectRemoveBuffer(bufferNum) "{{{1 
   let bufName = s:GetNameFromNum(a:bufferNum)
 
-  for key in keys(s:projectFiles)
-    call filter(s:projectFiles[key], 'v:val != bufName')
-    if empty(s:projectFiles[key])
-      unlet s:projectFiles[key]
-    endif
+  for groupName, buffers in s:projectFiles
+    call filter(buffers, 'v:val != bufName')
   endfor
+
+  call filter(s:projectFiles, '!empty(v:val[1])')
 endfunction
 
 function! s:ProjectSave(fileName) "{{{1
   let lastBufferNum = bufnr('%')
   let buffersDict = s:GetBuffersDict()
   let res = []
-  for key in keys(s:projectFiles)
-    if empty(s:projectFiles[key])
-      continue
-    endif
-    call add(res, key)
-    "call filter(s:projectFiles[key], 'v:val != bufName')
-    for b in s:projectFiles[key]
-      if !has_key(buffersDict, b)
-        continue
-      endif
+  for groupName, buffers  in s:projectFiles
+    call add(res, groupName)
+
+    for b in buffers
+      if !has_key(buffersDict, b) | continue | endif
       call add(res, "  ".b)
       let bufferNum = buffersDict[b]
       if bufloaded(bufferNum)
@@ -75,12 +91,11 @@ function! s:ProjectSave(fileName) "{{{1
   endfor
 
   call writefile(res, empty(a:fileName) ? s:projectFileName : a:fileName )
-
   exec 'keepalt b '.lastBufferNum
 endfunction
 
 function! s:ProjectLoad(fileName) "{{{1
-  let s:projectFiles = {}
+  let s:projectFiles = []
 "echo matchlist("abc-def", '\(.*\)-\(.*\)')
   let groupNameEx = '^\(\w\+\)$'
   let bufferNameEx = '^\s\s\(\S\+\)$'
@@ -90,7 +105,7 @@ function! s:ProjectLoad(fileName) "{{{1
     if l =~ groupNameEx 
       let groupName = matchlist(l, groupNameEx)[1]
       let currentList = []
-      let s:projectFiles[groupName] = currentList
+      call add(s:projectFiles, [groupName, currentList])
     elseif l =~ bufferNameEx 
       let bufferName = matchlist(l, bufferNameEx)[1]
       call add(currentList, bufferName)
@@ -108,14 +123,14 @@ function! s:ProjectPrint() "{{{1
   let buffersDict = s:GetBuffersDict()
 
   let groupedBuffers = []
-  for b in values(s:projectFiles)
+  for [g, b] in s:projectFiles
     let groupedBuffers += b
   endfor
 
   let ungroupedBuffers = keys(buffersDict)
   call filter(ungroupedBuffers, 'index(groupedBuffers, v:val) == -1')
 
-  let allGroups = items(s:projectFiles)
+  let allGroups = copy(s:projectFiles)
   call add(allGroups, ["ungrouped", ungroupedBuffers])
 
   let res = []
@@ -128,16 +143,11 @@ function! s:ProjectPrint() "{{{1
     for i in buffersList
       if !has_key(buffersDict, i) | continue | endif
       let bufferNum = buffersDict[i]
+      let bufferProp = s:buffersProperty[bufferNum]
 			if getbufvar(bufferNum, "&bt") == "quickfix" | continue | endif
-
       let isCurrent = buffersDict[i] == s:lastBufferNum 
-      let s = ["", "", ""] 
-      let s[0] = bufloaded(bufferNum) ? (isCurrent? "a" : "h")  : " "
-			let s[1] = getbufvar(bufferNum, "&ma") ? " " : "-"
-			let s[1] = getbufvar(bufferNum, "&readonly") ? "=" : s[1]
-			let s[2] = getbufvar(bufferNum, "&mod") ? "+" : " "
 
-      call add(res, printf("%3i %s %-50s %-s", buffersDict[i], join(s,''), fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
+      call add(res, printf("%3i%s%-50s %-s", buffersDict[i], bufferProp, fnamemodify(i,':p:t'), fnamemodify(i,':p:h') ))
       let lnum += isCurrent ? len(res) : 0
     endfor
     call add(res, "")
@@ -199,6 +209,7 @@ function! s:ProjectMoveBuffer(bufferName, delta) "{{{1
 endfunction
 
 function! WindowOpen() "{{{1
+  let s:buffersProperty = GetBuffersProperty()
   let s:lastBufferNum = bufnr('%')
   exe "keepjumps drop __ProjectExplorer__"
   setlocal nobuflisted " TODO: solve this 
@@ -223,11 +234,12 @@ endfunction
 
 function! s:WindowSetupSyntax() "{{{1
     if has("syntax")
-        syn match bufExplorerBufNbr   /^\s*\d\+/
-        syn match bufExplorerGroupName   "^\w\+$"
-        syn match bufExplorerLoadedBuffer   "h[ -=][ +] \S\+"
-        syn match bufExplorerCurrentBuffer  "a[ -=][ +] \S\+"
-        syn match bufExplorerModifiedBuffer "h[ -=]+ \S\+"
+        "'[u ][%# ][ah ][-= ][+x ] \S\+'
+        syn match bufExplorerBufNbr         /^\s*\d\+/
+        syn match bufExplorerGroupName      "^\w\+$"
+        syn match bufExplorerLoadedBuffer   '[u ][%# ]h[-= ][+x ] \S\+'
+        syn match bufExplorerCurrentBuffer  '[u ][%# ]a[-= ][+x ] \S\+'
+        syn match bufExplorerModifiedBuffer '[u ][%# ][ah ][-= ]+ \S\+'
 
         hi def link bufExplorerBufNbr Number
         hi def link bufExplorerGroupName Statement
