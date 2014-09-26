@@ -195,7 +195,7 @@ function! s:ProjectAskAddBuffer(bufferNum) "{{{1
   if groupName =~ '^\d\+$'
     let groupsBuffers = s:projectFiles[groupName-1][1]
   else 
-    let groups = map(copy(s:projectFiles, "v:val[0]"))
+    let groups = map(copy(s:projectFiles), "v:val[0]")
     let i = index(groups, groupName) 
     if i == -1
       call add(s:projectFiles, [groupName, groupsBuffers])
@@ -243,7 +243,6 @@ function! s:WindowBufferSettings() "{{{1
     setlocal bufhidden=hide
     setlocal noswapfile
     setlocal nobuflisted
-    setlocal filetype=gundo
     setlocal nolist
     setlocal nonumber
     setlocal relativenumber
@@ -257,17 +256,17 @@ endfunction
 function! s:WindowSetupSyntax() "{{{1
     if has("syntax")
         "'[u ][%# ][ah ][-= ][+x ] \S\+'
-        syn match bufExplorerBufNbr         /^\s*\d\+/
-        syn match bufExplorerGroupName      "^\w\+$"
-        syn match bufExplorerLoadedBuffer   '[u ][%# ]h[-= ][+x ] \S\+'
-        syn match bufExplorerCurrentBuffer  '[u ][%# ]a[-= ][+x ] \S\+'
-        syn match bufExplorerModifiedBuffer '[u ][%# ][ah ][-= ]+ \S\+'
+        syn match projectExplorerBufNbr         /^\s*\d\+/
+        syn match projectExplorerGroupName      "^\w\+$"
+        syn match projectExplorerLoadedBuffer   '[u ][%# ]h[-= ][+x ] \S\+'
+        syn match projectExplorerCurrentBuffer  '[u ][%# ]a[-= ][+x ] \S\+'
+        syn match projectExplorerModifiedBuffer '[u ][%# ][ah ][-= ]+ \S\+'
 
-        hi def link bufExplorerBufNbr Number
-        hi def link bufExplorerGroupName Statement
-        hi def link bufExplorerLoadedBuffer Constant
-        hi def link bufExplorerCurrentBuffer Type
-        hi def link bufExplorerModifiedBuffer PreProc
+        hi def link projectExplorerBufNbr Number
+        hi def link projectExplorerGroupName Statement
+        hi def link projectExplorerLoadedBuffer Constant
+        hi def link projectExplorerCurrentBuffer Type
+        hi def link projectExplorerModifiedBuffer PreProc
 
     endif
 endfunction
@@ -390,4 +389,4 @@ command! -nargs=0 ProjectCloseUngroup call <SID>ProjectCloseAllUnprojectBuffers(
 command! -nargs=1 ProjectLoad call <SID>ProjectLoad("<args>")
 command! -nargs=? ProjectSave call <SID>ProjectSave("<args>")
 
-"ProjectLoad /home/roman/Documents/prj.txt
+ProjectLoad /home/roman/Documents/prj.txt
