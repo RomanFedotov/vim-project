@@ -57,6 +57,9 @@ function! s:ProjectGetGroup(groupName, createNew) "{{{1
   return [] 
 endfunction
 
+function! s:ProjectGetGroupBuffersByIndex(groupIndex) "{{{1
+ return s:projectFiles[a:groupIndex][1]
+endfunction
 function! s:ProjectAddBuffer(bufferNum, groupName) "{{{1
   let bufName = s:GetNameFromNum(a:bufferNum)
   let group = s:ProjectGetGroup(a:groupName, 1)
@@ -368,6 +371,10 @@ endfunction
 function! s:WindowMoveGroup (delta) "{{{1
   let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
   if groupIndex == -1 | return | endif
+
+  if bufferNum == -1
+    let bufferNum = s:buffersDict[s:ProjectGetGroupBuffersByIndex(groupIndex)[0]]
+  endif
 
   call s:ProjectMoveGroup(groupIndex, a:delta)
   call s:ProjectPrint(bufferNum)
