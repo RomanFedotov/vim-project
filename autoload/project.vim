@@ -5,7 +5,7 @@
 " Licence:     Vim licence
 " Version:     0.0.3
 " ============================================================================
-let s:projectFiles = [] " list of groups
+let s:projectGroups = [] " list of groups
 " group : [groupData, groupBuffers]
 let s:projectFileName = ""
 let s:lastBufferNum = 0
@@ -67,16 +67,16 @@ endfunction
 
 
 function! s:ProjectGetGroupBuffersByIndex(groupIndex) "{{{1
- return s:projectFiles[a:groupIndex][1]
+ return s:projectGroups[a:groupIndex][1]
 endfunction
 
 function! s:ProjectGetGroup(groupName, createNew) "{{{1
-  for i in s:projectFiles
+  for i in s:projectGroups
     if s:GroupDataGetName(i[0]) == a:groupName | return i | endif
   endfor
   if a:createNew
     let newGroup = [s:GroupData(a:groupName), []]
-    call add(s:projectFiles, newGroup)
+    call add(s:projectGroups, newGroup)
     return newGroup
   endif
   return []
@@ -92,18 +92,18 @@ endfunction
 function! s:ProjectRemoveBuffer(bufferNum) "{{{1
   let bufName = s:GetNameFromNum(a:bufferNum)
 
-  for [groupData, buffers] in s:projectFiles
+  for [groupData, buffers] in s:projectGroups
     call filter(buffers, 'v:val != bufName')
   endfor
 
-  call filter(s:projectFiles, '!empty(v:val[1])')
+  call filter(s:projectGroups, '!empty(v:val[1])')
 endfunction
 
 function! project#save(fileName) "{{{1
   let lastBufferNum = bufnr('%')
   let buffersDict = s:GetBuffersDict()
   let res = []
-  for [groupData, buffers]  in s:projectFiles
+  for [groupData, buffers]  in s:projectGroups
     call add(res, s:GroupDataGetName(groupData) . " " . s:GroupDataGetClosed(groupData))
 
     for b in buffers
@@ -122,7 +122,7 @@ function! project#save(fileName) "{{{1
 endfunction
 
 function! project#load(fileName) "{{{1
-  let s:projectFiles = []
+  let s:projectGroups = []
 "echo matchlist("abc-def", '\(.*\)-\(.*\)')
   let groupNameEx = '^\(\w\+\)\s\([01]\)$'
   let bufferNameEx = '^\s\s\(\S\+\)$'
@@ -132,7 +132,7 @@ function! project#load(fileName) "{{{1
     if l =~ groupNameEx
       let [all, groupName, isClosed] = matchlist(l, groupNameEx)[:2]
       let currentList = []
-      call add(s:projectFiles, [s:GroupData(groupName, isClosed), currentList])
+      call add(s:projectGroups, [s:GroupData(groupName, isClosed), currentList])
     elseif l =~ bufferNameEx
       let bufferName = matchlist(l, bufferNameEx)[1]
       call add(currentList, bufferName)
@@ -144,7 +144,7 @@ endfunction
 
 function! s:ProjectGetUngrouped() "{{{1
   let groupedBuffers = []
-  for [gd, b] in s:projectFiles
+  for [gd, b] in s:projectGroups
     let groupedBuffers += b
   endfor
 
@@ -159,12 +159,12 @@ function! s:ProjectPrint() "{{{1
   setlocal modifiable
   normal! gg"_dG
 
-  let allGroups = copy(s:projectFiles)
+  let allGroups = copy(s:projectGroups)
   call add(allGroups, [s:GroupData("ungrouped"), s:ProjectGetUngrouped()])
 
   let res = []
   let s:lineInfo = [0]
-  let numGroups = len(s:projectFiles)
+  let numGroups = len(s:projectGroups)
   for i in range(len(allGroups))
     let [groupData, buffersList] = allGroups[i]
     let groupIndex = i < numGroups ? i : -1
@@ -197,7 +197,7 @@ endfunction
 
 function! s:ProjectGetLineInfo() "{{{1
   let [groupIndex, bufferIndex, bufferNum] = s:lineInfo[line('.')]
-  let bufferName = (groupIndex != -1 && bufferIndex != -1) ? s:projectFiles[groupIndex][1][bufferIndex] : -1
+  let bufferName = (groupIndex != -1 && bufferIndex != -1) ? s:projectGroups[groupIndex][1][bufferIndex] : -1
   return [groupIndex, bufferIndex, bufferNum]
 endfunction
 
@@ -219,7 +219,7 @@ endfunction
 function! s:ProjectAskAddBuffer(bufferNum) "{{{1
   let l = ""
   let n = 1
-  for [groupData, buffers] in s:projectFiles
+  for [groupData, buffers] in s:projectGroups
     let l = l . n . ". " . s:GroupDataGetName(groupData) . "\n"
     let n += 1
   endfor
@@ -228,7 +228,7 @@ function! s:ProjectAskAddBuffer(bufferNum) "{{{1
   let groupName = input(l)
   let groupsBuffers = []
   if groupName =~ '^\d\+$'
-    let groupsBuffers = s:projectFiles[groupName-1][1]
+    let groupsBuffers = s:projectGroups[groupName-1][1]
   else
     let groupsBuffers = s:ProjectGetGroup(groupName, 1)[1]
   endif
@@ -238,20 +238,20 @@ endfunction
 
 function! s:ProjectRenameGroup(groupIndex) "{{{1
   let newName = input("Enter new group name: ")
-  call s:GroupDataSetName(s:projectFiles[a:groupIndex][0] , newName)
+  call s:GroupDataSetName(s:projectGroups[a:groupIndex][0] , newName)
 endfunction
 
 function! s:ProjectMoveGroup(groupIndex, delta) "{{{1
   let newIndex = a:groupIndex + a:delta
-  if newIndex < 0 || newIndex >= len(s:projectFiles) | return a:groupIndex | endif
-  let tmp = s:projectFiles[a:groupIndex]
-  let s:projectFiles[a:groupIndex] = s:projectFiles[newIndex]
-  let s:projectFiles[newIndex] = tmp
+  if newIndex < 0 || newIndex >= len(s:projectGroups) | return a:groupIndex | endif
+  let tmp = s:projectGroups[a:groupIndex]
+  let s:projectGroups[a:groupIndex] = s:projectGroups[newIndex]
+  let s:projectGroups[newIndex] = tmp
   return newIndex
 endfunction
 
 function! s:ProjectMoveBuffer(groupIndex, bufferIndex, delta) "{{{1
-  let buffers = s:projectFiles[a:groupIndex][1]
+  let buffers = s:projectGroups[a:groupIndex][1]
   let newIndex = a:bufferIndex + a:delta
   if newIndex < 0 || newIndex >= len(buffers) | return a:bufferIndex | endif
   let tmp = buffers[a:bufferIndex]
@@ -420,7 +420,7 @@ function! s:WindowOpenCloseGroup (close) "{{{1
   let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if groupIndex == -1 | return | endif
 
-  call s:GroupDataSetClosed(s:projectFiles[groupIndex][0], a:close)
+  call s:GroupDataSetClosed(s:projectGroups[groupIndex][0], a:close)
   call s:ProjectPrint()
   call s:WindowSetCursorToIndex(groupIndex, -1)
 endfunction
