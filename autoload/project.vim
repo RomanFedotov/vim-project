@@ -3,8 +3,7 @@
 " Description: Plugin for organizing buffers.
 " Author:      Roman Fedotov
 " Licence:     Vim licence
-" Version:     0.0.2
-"
+" Version:     0.0.3
 " ============================================================================
 let s:projectFiles = [] " list of groups
 " group : [groupData, groupBuffers]
@@ -100,7 +99,7 @@ function! s:ProjectRemoveBuffer(bufferNum) "{{{1
   call filter(s:projectFiles, '!empty(v:val[1])')
 endfunction
 
-function! s:ProjectSave(fileName) "{{{1
+function! project#save(fileName) "{{{1
   let lastBufferNum = bufnr('%')
   let buffersDict = s:GetBuffersDict()
   let res = []
@@ -122,7 +121,7 @@ function! s:ProjectSave(fileName) "{{{1
   exec 'keepalt b '.lastBufferNum
 endfunction
 
-function! s:ProjectLoad(fileName) "{{{1
+function! project#load(fileName) "{{{1
   let s:projectFiles = []
 "echo matchlist("abc-def", '\(.*\)-\(.*\)')
   let groupNameEx = '^\(\w\+\)\s\([01]\)$'
@@ -209,7 +208,7 @@ function! s:ProjectGetLineByGroupIndex(groupIndex, bufferIndex)
   endfor
 endfunction
 
-function! s:ProjectCloseAllUnprojectBuffers() "{{{1
+function! project#closeAllUnprojectBuffers() "{{{1
   let s:buffersDict = s:GetBuffersDict()
   for bufferName in s:ProjectGetUngrouped()
     let bufferNum = s:buffersDict[bufferName]
@@ -261,7 +260,7 @@ function! s:ProjectMoveBuffer(groupIndex, bufferIndex, delta) "{{{1
   return newIndex
 endfunction
 
-function! WindowOpen() "{{{1
+function! project#windowOpen() "{{{1
   let s:buffersProperty = s:GetBuffersProperty()
   let s:buffersDict = s:GetBuffersDict()
 
@@ -426,13 +425,4 @@ function! s:WindowOpenCloseGroup (close) "{{{1
   call s:WindowSetCursorToIndex(groupIndex, -1)
 endfunction
 
-
 autocmd BufNewFile __ProjectExplorer__ call s:WindowBufferSettings()
-
-" {{{1 commands
-command! -nargs=0 ProjectExplorer call WindowOpen()
-command! -nargs=0 ProjectCloseUngroup call <SID>ProjectCloseAllUnprojectBuffers()
-command! -nargs=1 ProjectLoad call <SID>ProjectLoad("<args>")
-command! -nargs=? ProjectSave call <SID>ProjectSave("<args>")
-
-ProjectLoad /home/roman/Documents/prj.txt
