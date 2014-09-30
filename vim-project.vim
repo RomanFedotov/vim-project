@@ -199,7 +199,7 @@ endfunction
 function! s:ProjectGetLineInfo() "{{{1
   let [groupIndex, bufferIndex, bufferNum] = s:lineInfo[line('.')]
   let bufferName = (groupIndex != -1 && bufferIndex != -1) ? s:projectFiles[groupIndex][1][bufferIndex] : -1
-  return [bufferNum, groupIndex, bufferIndex]
+  return [groupIndex, bufferIndex, bufferNum]
 endfunction
 
 function! s:ProjectGetLineByGroupIndex(groupIndex, bufferIndex)
@@ -335,7 +335,7 @@ endfunction
     "return str2nr(getline('.'))
 "endfunction
 function! s:WindowJumpToBuffer() "{{{1
-  let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if bufferIndex == -1 | return | endif
 
   let viewIsLoaded = bufloaded(bufferNum)
@@ -350,7 +350,7 @@ function! s:WindowClose() "{{{1
 endfunction
 
 function! s:WindowWipeBuffer() "{{{1
-  let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if bufferIndex == -1 | return | endif
 
 	let lnum = line('.')
@@ -362,7 +362,7 @@ function! s:WindowWipeBuffer() "{{{1
 endfunction
 
 function! s:WindowAddRemoveBuffer() "{{{1
-  let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if bufferIndex == -1 | return | endif
 
   if groupIndex == -1
@@ -373,7 +373,7 @@ function! s:WindowAddRemoveBuffer() "{{{1
 endfunction
 
 function! s:WindowRemoveBufferFromProject() "{{{1
-  let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if bufferIndex == -1 | return | endif
 
 	let lnum = line('.')
@@ -383,7 +383,7 @@ function! s:WindowRemoveBufferFromProject() "{{{1
 endfunction
 
 function! s:WindowAddBufferToProject() "{{{1
-  let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if bufferIndex == -1 | return | endif
 
   call s:ProjectAskAddBuffer(bufferNum)
@@ -391,8 +391,8 @@ function! s:WindowAddBufferToProject() "{{{1
 endfunction
 
 function! s:WindowMoveBuffer(delta) "{{{1
-  let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
-  if bufferIndex == -1 | return | endif
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
+  if bufferIndex == -1 || groupIndex == -1 | return | endif
 
   let bufferIndex = s:ProjectMoveBuffer(groupIndex, bufferIndex, a:delta)
   call s:ProjectPrint()
@@ -400,7 +400,7 @@ function! s:WindowMoveBuffer(delta) "{{{1
 endfunction
 
 function! s:WindowMoveGroup (delta) "{{{1
-  let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if groupIndex == -1 | return | endif
 
   let groupIndex =  s:ProjectMoveGroup(groupIndex, a:delta)
@@ -409,7 +409,7 @@ function! s:WindowMoveGroup (delta) "{{{1
 endfunction
 
 function! s:WindowRenameGroup () "{{{1
-  let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if groupIndex == -1 | return | endif
 
   call s:ProjectRenameGroup(groupIndex)
@@ -418,7 +418,7 @@ function! s:WindowRenameGroup () "{{{1
 endfunction
 
 function! s:WindowOpenCloseGroup (close) "{{{1
-  let [bufferNum, groupIndex, bufferIndex] = s:ProjectGetLineInfo()
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if groupIndex == -1 | return | endif
 
   call s:GroupDataSetClosed(s:projectFiles[groupIndex][0], a:close)
