@@ -65,6 +65,11 @@ function! s:GroupDataSetClosed(groupData, isClosed)
   let a:groupData[1] = a:isClosed
 endfunction
 
+function! s:ProjectRemoveClosedBuffers() "{{{1
+  for [gd, buffers] in s:projectGroups
+    call filter(buffers, "has_key(s:buffersDict, v:val)")
+  endfor
+endfunction
 
 function! s:ProjectGetGroupBuffersByIndex(groupIndex) "{{{1
  return s:projectGroups[a:groupIndex][1]
@@ -174,6 +179,7 @@ function! s:ProjectPrint() "{{{1
 
     if s:GroupDataGetClosed(groupData) | continue | endif
 
+
     for bufferIndex in range(len(buffersList))
       let bufferName = buffersList[bufferIndex]
       if !has_key(s:buffersDict, bufferName) | continue | endif
@@ -263,6 +269,7 @@ endfunction
 function! project#windowOpen() "{{{1
   let s:buffersProperty = s:GetBuffersProperty()
   let s:buffersDict = s:GetBuffersDict()
+  call s:ProjectRemoveClosedBuffers()
 
   let s:lastBufferNum = bufnr('%')
   exe "keepjumps drop __ProjectExplorer__"
