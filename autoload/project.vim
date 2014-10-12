@@ -225,7 +225,7 @@ function! project#closeAllUnprojectBuffers() "{{{1
 endfunction
 
 function! project#closeAllUnlistedBuffers() "{{{1
-  let unlistedBuffers = filter(range(1, bufnr('$')), "!buflisted(v:val)")
+  let unlistedBuffers = filter(range(1, bufnr('$')), "!buflisted(v:val) && bufexists(v:val)")
   for i in unlistedBuffers
     let bufShortName =  fnamemodify(bufname(i), ":t")
     if bufShortName[0] != "[" && bufShortName[0] != "_"
