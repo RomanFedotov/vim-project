@@ -31,12 +31,14 @@ endfunction
 
 function! s:GetBuffersProperty() "{{{1
   redir => lsOutput
-  silent buffers!
+  silent buffers
   redir END
   let lsLines = split(lsOutput, '\n')
   let res = {}
+  let bufEx = '^\s*\(\d\+\)\s\(.*\)\s"'
   for l in lsLines
-    let res[str2nr(l[:2])]=l[4:7]
+    let [bufNum, bufProp] = matchlist(l, bufEx)[1:2]
+    let res[bufNum] = bufProp
   endfor
   return res
 endfunction
@@ -219,6 +221,16 @@ function! project#closeAllUnprojectBuffers() "{{{1
   for bufferName in s:ProjectGetUngrouped()
     let bufferNum = s:buffersDict[bufferName]
     execute "bwipeout ".bufferNum
+  endfor
+endfunction
+
+function! project#closeAllUnlistedBuffers() "{{{1
+  let unlistedBuffers = filter(range(1, bufnr('$')), "!buflisted(v:val)")
+  for i in unlistedBuffers
+    let bufShortName =  fnamemodify(bufname(i), ":t")
+    if bufShortName[0] != "[" && bufShortName[0] != "_"
+      execute "bwipeout ".i
+    endif
   endfor
 endfunction
 
