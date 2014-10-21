@@ -123,8 +123,9 @@ function! project#save(fileName) "{{{1
       endif
     endfor
   endfor
-
-  call writefile(res, empty(a:fileName) ? s:projectFileName : a:fileName )
+  
+  let s:projectFileName = empty(a:fileName) ? s:projectFileName : a:fileName
+  call writefile(res, s:projectFileName )
   exec 'keepalt b '.lastBufferNum
 endfunction
 
@@ -213,6 +214,13 @@ function! s:ProjectGetLineByGroupIndex(groupIndex, bufferIndex)
   for i in range(1, len(s:lineInfo)-1)
     let curInfo = s:lineInfo[i]
     if curInfo[0] == a:groupIndex && curInfo[1] == a:bufferIndex | return i | endif
+  endfor
+endfunction
+
+function! s:ProjectGetLineByBufferNum(bufferNum)
+  for i in range(1, len(s:lineInfo)-1)
+    let curInfo = s:lineInfo[i]
+    if curInfo[2] == a:bufferNum | return i | endif
   endfor
 endfunction
 
@@ -331,6 +339,7 @@ function! s:WindowMapKeys() "{{{1
     nnoremap <script> <silent> <buffer> <CR>          :call <SID>WindowJumpToBuffer()<CR>
     nnoremap <script> <silent> <buffer> q             :call <SID>WindowClose()<CR>
     nnoremap <script> <silent> <buffer> -             :call <SID>WindowAddRemoveBuffer()<cr>
+    nnoremap <script> <silent> <buffer> m             :call <SID>WindowMoveBufferToGroup()<cr>
     nnoremap <script> <silent> <buffer> D             :call <SID>WindowWipeBuffer()<CR>
     nnoremap <script> <silent> <buffer> <C-j>         :call <SID>WindowMoveBuffer(1)<cr>
     nnoremap <script> <silent> <buffer> <C-k>         :call <SID>WindowMoveBuffer(-1)<cr>
@@ -349,9 +358,10 @@ function! s:WindowSetCursorToIndex(groupIndex, bufferIndex) "{{{1
   keepjumps keepalt exe "normal! " . s:ProjectGetLineByGroupIndex(a:groupIndex, a:bufferIndex) . "gg"
 endfunction
 
-"function! s:WindowGetBufferNum() "{{{1
-    "return str2nr(getline('.'))
-"endfunction
+function! s:WindowSetCursorBufferNum(bufferNum) "{{{1
+  keepjumps keepalt exe "normal! " . s:ProjectGetLineByBufferNum(a:bufferNum) . "gg"
+endfunction
+
 function! s:WindowJumpToBuffer() "{{{1
   let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
   if bufferIndex == -1 | return | endif
@@ -406,6 +416,18 @@ function! s:WindowAddBufferToProject() "{{{1
 
   call s:ProjectAskAddBuffer(bufferNum)
   call s:ProjectPrint()
+  call s:WindowSetCursorBufferNum(bufferNum)
+endfunction
+
+function! s:WindowMoveBufferToGroup() "{{{1
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
+  if bufferIndex == -1 | return | endif
+
+  call s:ProjectRemoveBuffer(bufferNum)
+  call s:ProjectAskAddBuffer(bufferNum)
+  call s:ProjectPrint()
+
+  call s:WindowSetCursorBufferNum(bufferNum)
 endfunction
 
 function! s:WindowMoveBuffer(delta) "{{{1
