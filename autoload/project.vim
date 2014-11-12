@@ -163,6 +163,7 @@ endfunction
 
 function! s:ProjectPrint() "{{{1
 "let s:lastBufferNum = 0
+  let lastBufferName = s:GetNameFromNum(s:lastBufferNum)
   let lnum = 0
   setlocal modifiable
   normal! gg"_dG
@@ -170,9 +171,14 @@ function! s:ProjectPrint() "{{{1
   let allGroups = copy(s:projectGroups)
   call add(allGroups, [s:GroupData("ungrouped"), s:ProjectGetUngrouped()])
 
+
   let res = []
   let s:lineInfo = [0]
   let numGroups = len(s:projectGroups)
+
+  call add(res, printf(" %20s",fnamemodify(s:projectFileName, ":p:t:r")))
+  call add(s:lineInfo, [-1, -1, -1])
+
   for i in range(len(allGroups))
     let [groupData, buffersList] = allGroups[i]
     let groupIndex = i < numGroups ? i : -1
@@ -180,8 +186,7 @@ function! s:ProjectPrint() "{{{1
     call add(res, (s:GroupDataGetClosed(groupData) ? "▶ " : "▼ ") .s:GroupDataGetName(groupData))
     call add(s:lineInfo, [groupIndex, -1, -1])
 
-    if s:GroupDataGetClosed(groupData) | continue | endif
-
+    if s:GroupDataGetClosed(groupData) &&  index(buffersList, lastBufferName) == -1 | continue | endif
 
     for bufferIndex in range(len(buffersList))
       let bufferName = buffersList[bufferIndex]
