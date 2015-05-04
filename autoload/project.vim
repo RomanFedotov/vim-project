@@ -19,11 +19,20 @@ function! s:GetBuffers() "{{{1
   "fnamemodify(bufname(v:val), ':p')")
 endfunction
 
+function! s:GetNameFromNum(bufNum) "{{{1
+  let n = fnamemodify(bufname(a:bufNum), ":p")
+  if fnamemodify(bufname(a:bufNum), ':t') == ""
+    return n."[NoName-".a:bufNum."]"
+  else
+    return n
+  endif
+endfunction
+
 function! s:GetBuffersDict() "{{{1
   let l = s:GetBuffers()
   let res = {}
   for i in l
-    let bufName = fnamemodify(bufname(i), ':p')
+    let bufName = s:GetNameFromNum(i)
     let res[bufName] = i
   endfor
   return res
@@ -41,10 +50,6 @@ function! s:GetBuffersProperty() "{{{1
     let res[bufNum] = bufProp
   endfor
   return res
-endfunction
-
-function! s:GetNameFromNum(bufNum) "{{{1
-  return fnamemodify(bufname(a:bufNum), ":p")
 endfunction
 
 function! s:GroupData(groupName, ...)
@@ -176,7 +181,8 @@ function! s:ProjectPrint() "{{{1
   let s:lineInfo = [0]
   let numGroups = len(s:projectGroups)
 
-  call add(res, printf(" %20s",fnamemodify(s:projectFileName, ":p:t:r")))
+  call add(res, printf("    -~={ %s }=~-",fnamemodify(s:projectFileName, ":p:t:r")))
+
   call add(s:lineInfo, [-1, -1, -1])
 
   for i in range(len(allGroups))
@@ -207,6 +213,7 @@ function! s:ProjectPrint() "{{{1
 
   keepjumps keepalt exe "normal! " . lnum . "gg"
   setlocal nomodifiable
+  normal zb
 endfunction
 
 function! s:ProjectGetLineInfo() "{{{1
