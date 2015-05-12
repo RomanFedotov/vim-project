@@ -123,7 +123,7 @@ function! project#save(fileName) "{{{1
       if !has_key(buffersDict, b) | continue | endif
 
       let line = "  ".b
-      if has_key(s:buffersHotKeys, b) | let line .= " ".s:buffersHotKeys[b] | endif
+      if has_key(s:buffersHotKeys, b) | let line .= " hotkey:".s:buffersHotKeys[b] | endif
       call add(res, line)
 
       let bufferNum = buffersDict[b]
@@ -143,12 +143,11 @@ endfunction
 
 function! project#load(fileName) "{{{1
   let s:projectGroups = []
-"echo matchlist("abc-def", '\(.*\)-\(.*\)')
-"                     <name-->  <close> 
+  "echo matchlist("abc-def", '\(.*\)-\(.*\)')
+  "                   <name--><---close> 
   let groupNameEx = '^\(\w\+\)\s\([01]\)$'
-  "                                  <hotk->
-  let bufferNameEx = '^\s\s\(\S\+\)\%(\s\(.\)\)\?$'
-"echo matchlist("  abc-def h",  '^\s\s\(\S\+\)\%(\s\(.\)\)\?$')
+  "                                  <hotkey----------->
+  let bufferNameEx = '^\s\s\(\S\+\)\%(\shotkey:\(.\)\)\?$'
   let currentList = []
 
   for l in readfile(a:fileName)
@@ -181,7 +180,6 @@ function! s:ProjectGetUngrouped() "{{{1
 endfunction
 
 function! s:ProjectPrint() "{{{1
-"let s:lastBufferNum = 0
   let lastBufferName = s:GetNameFromNum(s:lastBufferNum)
   let lnum = 0
   setlocal modifiable
