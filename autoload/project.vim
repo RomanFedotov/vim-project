@@ -20,6 +20,26 @@ function! s:GetBuffers() "{{{1
   "fnamemodify(bufname(v:val), ':p')")
 endfunction
 
+function! s:CloseAllBuffers() "{{{1
+  exe "1,"bufnr('$')"bd"
+endfunction
+
+function! s:HotKeyAdd(letter, bufName) "{{{1
+  let s:buffersHotKeys[a:bufName] = a:letter 
+  silent exe "nmap <silent> <M-" . a:letter . "> :b " . a:bufName "<cr>"
+endfunction
+
+function! s:HotKeyRemove(letter, bufName) "{{{1
+  silent exe "nunmap <M-" . a:letter . ">"
+  unlet s:buffersHotKeys[a:bufName]
+endfunction
+
+function! s:HotKeyRemoveAll() "{{{1
+  for k in keys(s:buffersHotKeys)
+    call s:HotKeyRemove(s:buffersHotKeys[k], k)
+  endfor
+endfunction
+
 function! s:GetNameFromNum(bufNum) "{{{1
   let n = fnamemodify(bufname(a:bufNum), ":p")
   if fnamemodify(bufname(a:bufNum), ':t') == ""
@@ -113,6 +133,7 @@ function! s:ProjectRemoveBuffer(bufferNum) "{{{1
 endfunction
 
 function! project#save(fileName) "{{{1
+  wa
   let lastBufferNum = bufnr('%')
   let buffersDict = s:GetBuffersDict()
   let res = []
@@ -142,6 +163,8 @@ function! project#save(fileName) "{{{1
 endfunction
 
 function! project#load(fileName) "{{{1
+  call s:HotKeyRemoveAll()
+  call s:CloseAllBuffers()
   let s:projectGroups = []
   "echo matchlist("abc-def", '\(.*\)-\(.*\)')
   "                   <name--><---close> 
@@ -160,8 +183,7 @@ function! project#load(fileName) "{{{1
       call add(currentList, bufferName)
       silent exe "badd " . bufferName
       if hotKey != ""
-        let s:buffersHotKeys[bufferName] = hotKey 
-        silent exe "nmap <silent> <M-" .hotKey . "> :b " . bufferName "<cr>"
+        call s:HotKeyAdd(hotKey, bufferName)
       endif
     endif
   endfor
@@ -377,6 +399,8 @@ function! s:WindowMapKeys() "{{{1
     nnoremap <script> <silent> <buffer> zc            :call <SID>WindowOpenCloseGroup(1)<cr>
     nnoremap <script> <silent> <buffer> e             :call <SID>WindowSetBufferHotKey()<cr>
 
+    command! -buffer -nargs=0 Load                    :call <SID>WindowLoadSelectedProject()
+
 
     for k in ["G", "n", "N", "L", "M", "H"]
         exec "nnoremap <buffer> <silent>" k ":keepjumps normal!" k."<CR>"
@@ -503,15 +527,21 @@ function! s:WindowSetBufferHotKey() "{{{1
 
   let hotKey = input("Enter buffer hot key: ")
   if hotKey == " " && has_key(s:buffersHotKeys, bufName)
-    silent exe "nunmap <M-" . s:buffersHotKeys[bufName] . ">"
-    unlet s:buffersHotKeys[bufName]
+    call s:HotKeyRemove(s:buffersHotKeys[bufName], bufName)
   elseif hotKey != ""
-    let s:buffersHotKeys[bufName] = hotKey
-    silent exe "nmap <silent> <M-" .hotKey . "> :b " . bufName "<cr>"
+    call s:HotKeyAdd(hotKey, bufName)
   endif
 
   call s:ProjectPrint()
   call s:WindowSetCursorToIndex(groupIndex, bufferIndex)
+endfunction
+
+function! s:WindowLoadSelectedProject() "{{{1
+  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo()
+  if bufferIndex == -1 | return | endif
+
+  let bufName = s:GetNameFromNum(bufferNum)
+  call project#load(bufName)
 endfunction
 
 autocmd BufNewFile __ProjectExplorer__ call s:WindowBufferSettings()
