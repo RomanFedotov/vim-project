@@ -20,10 +20,6 @@ function! s:GetBuffers() "{{{1
   "fnamemodify(bufname(v:val), ':p')")
 endfunction
 
-function! s:CloseAllBuffers() "{{{1
-  exe "1,"bufnr('$')"bd"
-endfunction
-
 function! s:HotKeyAdd(letter, bufName) "{{{1
   let s:buffersHotKeys[a:bufName] = a:letter 
   silent exe "nmap <silent> <M-" . a:letter . "> :b " . a:bufName "<cr>"
@@ -154,8 +150,6 @@ function! project#save(fileName) "{{{1
       endif
     endfor
   endfor
-
-
   
   let s:projectFileName = empty(a:fileName) ? s:projectFileName : a:fileName
   call writefile(res, s:projectFileName )
@@ -164,7 +158,8 @@ endfunction
 
 function! project#load(fileName) "{{{1
   call s:HotKeyRemoveAll()
-  call s:CloseAllBuffers()
+  %bwipeout
+  call project#closeAllUnlistedBuffers()
   let s:projectGroups = []
   "echo matchlist("abc-def", '\(.*\)-\(.*\)')
   "                   <name--><---close> 
@@ -208,8 +203,8 @@ function! s:ProjectPrint() "{{{1
   normal! gg"_dG
 
   let allGroups = copy(s:projectGroups)
-  call add(allGroups, [s:GroupData("ungrouped"), s:ProjectGetUngrouped()])
-
+  let ungrouped = s:ProjectGetUngrouped()
+  if !empty(ungrouped) | call add(allGroups, [s:GroupData("ungrouped"), ungrouped]) | endif
 
   let res = []
   let s:lineInfo = [0]
