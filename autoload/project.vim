@@ -21,18 +21,23 @@ function! s:GetBuffers() "{{{1
 endfunction
 
 function! s:HotKeyAdd(letter, bufName) "{{{1
+  call s:HotKeyRemove(a:letter)
   let s:buffersHotKeys[a:bufName] = a:letter 
   silent exe "nmap <silent> <M-" . a:letter . "> :b " . a:bufName "<cr>"
 endfunction
 
-function! s:HotKeyRemove(letter, bufName) "{{{1
-  silent exe "nunmap <M-" . a:letter . ">"
-  unlet s:buffersHotKeys[a:bufName]
+function! s:HotKeyRemove(letter) "{{{1
+  for [bufName, keyLetter] in items(s:buffersHotKeys)
+    if keyLetter == a:letter
+      silent exe "nunmap <M-" . a:letter . ">"
+      unlet s:buffersHotKeys[bufName]
+    endif
+  endfor
 endfunction
 
 function! s:HotKeyRemoveAll() "{{{1
   for k in keys(s:buffersHotKeys)
-    call s:HotKeyRemove(s:buffersHotKeys[k], k)
+    call s:HotKeyRemove(s:buffersHotKeys[k])
   endfor
 endfunction
 
@@ -280,7 +285,7 @@ function! project#closeAllUnlistedBuffers() "{{{1
   let unlistedBuffers = filter(range(1, bufnr('$')), "!buflisted(v:val) && bufexists(v:val)")
   for i in unlistedBuffers
     let bufShortName =  fnamemodify(bufname(i), ":t")
-    if bufShortName[0] != "[" && bufShortName[0] != "_"
+    if bufShortName[0] != "[" && bufShortName[0] != "_" && bufShortName !~ "NERD_tree_.*"
       execute "bwipeout ".i
     endif
   endfor
@@ -522,7 +527,7 @@ function! s:WindowSetBufferHotKey() "{{{1
 
   let hotKey = input("Enter buffer hot key: ")
   if hotKey == " " && has_key(s:buffersHotKeys, bufName)
-    call s:HotKeyRemove(s:buffersHotKeys[bufName], bufName)
+    call s:HotKeyRemove(s:buffersHotKeys[bufName])
   elseif hotKey != ""
     call s:HotKeyAdd(hotKey, bufName)
   endif
