@@ -163,8 +163,6 @@ endfunction
 
 function! project#load(fileName) "{{{1
   call s:HotKeyRemoveAll()
-  %bwipeout
-  call project#closeAllUnlistedBuffers()
   let s:projectGroups = []
   "echo matchlist("abc-def", '\(.*\)-\(.*\)')
   "                   <name--><---close> 
@@ -188,6 +186,9 @@ function! project#load(fileName) "{{{1
     endif
   endfor
   let s:projectFileName = a:fileName
+  call project#closeAllUnlistedBuffers()
+  call project#closeAllUnprojectBuffers()
+  call project#windowOpen()
 endfunction
 
 function! s:ProjectGetUngrouped() "{{{1
