@@ -22,8 +22,16 @@ endfunction
 
 function! s:HotKeyAdd(letter, bufName) "{{{1
   call s:HotKeyRemove(a:letter)
-  let s:buffersHotKeys[a:bufName] = a:letter 
-  silent exe "nmap <silent> <M-" . a:letter . "> :b " . a:bufName "<cr>"
+  let s:buffersHotKeys[a:bufName] = a:letter
+  silent exe "nmap <silent> <M-" . a:letter . "> :call <SID>HotKeyJumpToBuffer(\"" . a:bufName . "\")<cr>"
+endfunction
+
+function! s:HotKeyJumpToBuffer(bufName) "{{{1
+  let viewIsLoaded = bufloaded(a:bufName)
+  exec 'keepalt b '.a:bufName
+  if !viewIsLoaded
+    loadview
+  endif
 endfunction
 
 function! s:HotKeyRemove(letter) "{{{1
