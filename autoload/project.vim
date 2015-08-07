@@ -256,7 +256,7 @@ function! s:ProjectPrint() "{{{1
   endfor
 
   call append(0, res)
-  $delete
+  $delete _
 
   keepjumps keepalt exe "normal! " . lnum . "gg"
   setlocal nomodifiable
