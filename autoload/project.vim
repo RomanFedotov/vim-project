@@ -345,14 +345,29 @@ function! s:ProjectMoveBuffer(groupIndex, bufferIndex, delta) "{{{1
   return newIndex
 endfunction
 
+function! s:WindowOpenProjectExplorerBuffer() "{{{1
+  let bufNum = bufnr("__ProjectExplorer__")
+  if bufNum == -1
+    exe "edit __ProjectExplorer__"
+    return
+  endif
+
+  let existingWindow = bufwinnr(bufNum)
+  if existingWindow != -1 && winnr() != existingWindow
+    exe existingWindow . "wincmd w"
+    return
+  endif
+
+  exe "buffer __ProjectExplorer__"
+endfunction
+
 function! project#windowOpen() "{{{1
   let s:buffersProperty = s:GetBuffersProperty()
   let s:buffersDict = s:GetBuffersDict()
   call s:ProjectRemoveClosedBuffers()
 
   let s:lastBufferNum = bufnr('%')
-  exe "keepjumps drop __ProjectExplorer__"
-  setlocal nobuflisted " TODO: solve this
+  call s:WindowOpenProjectExplorerBuffer()
   call s:ProjectPrint()
 endfunction
 
