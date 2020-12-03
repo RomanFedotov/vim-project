@@ -368,14 +368,25 @@ function! s:ProjectMoveGroup(groupIndex, delta) "{{{1
   return newIndex
 endfunction
 
-function! s:ProjectMoveBuffer(groupIndex, bufferIndex, delta) "{{{1
-  let buffers = s:projectGroups[a:groupIndex][1]
-  let newIndex = a:bufferIndex + a:delta
-  if newIndex < 0 || newIndex >= len(buffers) | return a:bufferIndex | endif
-  let tmp = buffers[a:bufferIndex]
-  let buffers[a:bufferIndex] = buffers[newIndex]
-  let buffers[newIndex] = tmp
-  return newIndex
+function! s:ProjectMoveBuffer(buffersInfo, delta) "{{{1
+  let [groupIndex, firstBufferIndex, firstBufferNum] = a:buffersInfo[0]
+  call filter(a:buffersInfo, "v:val[0] == groupIndex")
+  let buffers = s:projectGroups[groupIndex][1]
+
+  let numLines = len(a:buffersInfo)
+
+  if firstBufferIndex + a:delta < 0 || firstBufferIndex + a:delta + numLines - 1 >= len(buffers) 
+    return [groupIndex, firstBufferIndex]
+  endif
+
+  let from = a:delta == -1 ? firstBufferIndex - 1            : firstBufferIndex + numLines
+  let to   = a:delta == -1 ? firstBufferIndex + numLines - 1 : firstBufferIndex
+
+  let tmp = buffers[from]
+  call remove(buffers, from)
+  call insert(buffers, tmp, to)
+
+  return [groupIndex, firstBufferIndex + a:delta]
 endfunction
 
 function! s:WindowOpenProjectExplorerBuffer() "{{{1
@@ -450,8 +461,10 @@ function! s:WindowMapKeys() "{{{1
     nnoremap <script> <silent> <buffer> m             :call <SID>WindowMoveBufferToGroup()<cr>
     vnoremap <script> <silent> <buffer> m             :call <SID>WindowMoveBufferToGroup()<cr>
     nnoremap <script> <silent> <buffer> D             :call <SID>WindowWipeBuffer()<CR>
-    nnoremap <script> <silent> <buffer> <C-j>         :call <SID>WindowMoveBuffer(1)<cr>
-    nnoremap <script> <silent> <buffer> <C-k>         :call <SID>WindowMoveBuffer(-1)<cr>
+    nnoremap <script> <silent> <buffer> <Down>         :call <SID>WindowMoveBuffer(1)<cr>
+    vnoremap <script> <silent> <buffer> <Down>         :call <SID>WindowMoveBuffer(1)<cr>
+    nnoremap <script> <silent> <buffer> <Up>         :call <SID>WindowMoveBuffer(-1)<cr>
+    vnoremap <script> <silent> <buffer> <Up>         :call <SID>WindowMoveBuffer(-1)<cr>
     nnoremap <script> <silent> <buffer> J             :call <SID>WindowMoveGroup(1)<cr>
     nnoremap <script> <silent> <buffer> K             :call <SID>WindowMoveGroup(-1)<cr>
     nnoremap <script> <silent> <buffer> r             :call <SID>WindowRenameGroup ()<cr>
@@ -473,6 +486,10 @@ endfunction
 
 function! s:WindowSetCursorBufferNum(bufferNum) "{{{1
   keepjumps keepalt exe "normal! " . s:ProjectGetLineByBufferNum(a:bufferNum) . "gg"
+endfunction
+
+function! s:WindowSelectLines(numLines) "{{{1
+  if a:numLines > 1 | exe "normal V".(a:numLines - 1)."j" | endif
 endfunction
 
 function! s:WindowJumpToBuffer() "{{{1
@@ -508,7 +525,7 @@ function! s:WindowGetCurrentLinesInfo(startLine, lastLine) "{{{1
   for i in range(a:startLine, a:lastLine)
     let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetLineInfo(i)
     if bufferIndex != -1  
-      call add(bufferNums, bufferNum) 
+      call add(bufferNums, [groupIndex, bufferIndex, bufferNum]) 
     endif
   endfor
 
@@ -517,16 +534,19 @@ endfunction
 
 function! s:WindowRemoveBuffersFromProject() range "{{{1
   let bufferNums = s:WindowGetCurrentLinesInfo(a:firstline, a:lastline)
+  call map(bufferNums, 'v:val[2]')
   if empty(bufferNums)  | return | endif
 
 	let lnum = line('.')
   call s:ProjectRemoveBuffers(bufferNums)
   call s:ProjectPrint()
   keepjumps keepalt exe "normal! " . lnum . "gg"
+
 endfunction
 
 function! s:WindowMoveBufferToGroup() range "{{{1
   let bufferNums = s:WindowGetCurrentLinesInfo(a:firstline, a:lastline)
+  call map(bufferNums, 'v:val[2]')
   if empty(bufferNums)  | return | endif
 
   call s:ProjectRemoveBuffers(bufferNums)
@@ -534,15 +554,18 @@ function! s:WindowMoveBufferToGroup() range "{{{1
   let groupBuffers += map(copy(bufferNums), 's:GetNameFromNum(v:val)')
   call s:ProjectPrint()
   call s:WindowSetCursorBufferNum(bufferNums[0])
+  call s:WindowSelectLines(len(bufferNums))
 endfunction
 
-function! s:WindowMoveBuffer(delta) "{{{1
-  let [groupIndex, bufferIndex, bufferNum] = s:ProjectGetCurrentLineInfo()
-  if bufferIndex == -1 || groupIndex == -1 | return | endif
+function! s:WindowMoveBuffer(delta) range "{{{1
+  let buffersInfo = s:WindowGetCurrentLinesInfo(a:firstline, a:lastline)
+  if empty(buffersInfo)  | return | endif
 
-  let bufferIndex = s:ProjectMoveBuffer(groupIndex, bufferIndex, a:delta)
+  let [groupIndex, firstBufferIndex] = s:ProjectMoveBuffer(buffersInfo, a:delta)
+
   call s:ProjectPrint()
-  call s:WindowSetCursorToIndex(groupIndex, bufferIndex)
+  call s:WindowSetCursorToIndex(groupIndex, firstBufferIndex)
+  call s:WindowSelectLines(len(buffersInfo))
 endfunction
 
 function! s:WindowMoveGroup (delta) "{{{1
