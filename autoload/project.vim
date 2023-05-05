@@ -166,7 +166,7 @@ function! s:ProjectRemoveBuffers(bufferNums) "{{{1
 endfunction
 
 function! project#save(fileName) "{{{1
-  wa
+  "wa
   let lastBufferNum = bufnr('%')
   let buffersDict = s:GetBuffersDict()
   let res = []
@@ -189,8 +189,10 @@ function! project#save(fileName) "{{{1
   endfor
   
   let s:projectFileName = empty(a:fileName) ? s:projectFileName : a:fileName
-  call writefile(res, s:projectFileName )
-  exec 'keepalt b '.lastBufferNum
+  if !empty(s:projectFileName)
+    call writefile(res, s:projectFileName )
+    exec 'keepalt b '.lastBufferNum
+  endif
 endfunction
 
 function! project#load(fileName) "{{{1
@@ -200,7 +202,7 @@ function! project#load(fileName) "{{{1
   "                   <name--><---close> 
   let groupNameEx = '^\(\w\+\)\s\([01]\)$'
   "                                  <hotkey----------->
-  let bufferNameEx = '^\s\s\(\S\+\)\%(\shotkey:\(.\)\)\?$'
+  let bufferNameEx = '^\s\s\(.\{-}\)\%(\shotkey:\(.\)\)\?$'
   let currentList = []
 
   for l in readfile(a:fileName)
